@@ -94,7 +94,12 @@ def print_range(path: str) -> int:
 def choose_front_months(
     path: str, sym: dict[int, str], days: SessionDays
 ) -> tuple[dict[int, int], int, int]:
-    """Volume-ranked front month per session-day.
+    """Front month per session-day, ranked on the PREVIOUS day's volume.
+
+    Ranking on the SAME day's volume isn't causal — it's only known once the
+    day is over, which would leak lookahead into the crossover day. Day D
+    trades whichever contract led on D-1; the first day has no predecessor
+    and ranks on itself.
 
     Returns (day_index -> instrument_id, records_scanned, records_off_session).
     """
@@ -113,12 +118,17 @@ def choose_front_months(
         if scanned % 5_000_000 == 0:
             print(f"  scan {scanned:,}", flush=True)
 
-    best: dict[int, tuple[int, int]] = {}
-    for (di, iid), v in vol.items():
-        cur = best.get(di)
-        if cur is None or v > cur[1]:
-            best[di] = (iid, v)
-    return {di: iid for di, (iid, _) in best.items()}, scanned, off_session
+    winners: dict[int, int] = {}
+    for di in {d for d, _ in vol}:
+        per_instrument = {iid: v for (d, iid), v in vol.items() if d == di}
+        winners[di] = max(per_instrument.items(), key=lambda kv: (kv[1], -kv[0]))[0]
+
+    # Shift forward one day: day D trades the contract that led on day D-1.
+    front: dict[int, int] = {}
+    for di in sorted(winners):
+        prior = winners.get(di - 1)
+        front[di] = prior if prior is not None else winners[di]
+    return front, scanned, off_session
 
 
 def main() -> int:
@@ -196,10 +206,13 @@ def main() -> int:
         conn.execute("PRAGMA busy_timeout = 30000")
         conn.execute("PRAGMA synchronous = NORMAL")
         conn.execute("PRAGMA cache_size = -200000")
+        # price_basis: a vendor batch is as-traded by construction (per-contract
+        # prices, no adjustment) — stamp it at write time so imported rows never
+        # depend on a later backfill to be labelled.
         ins = (
             "INSERT OR REPLACE INTO candles"
-            " (symbol, timeframe, timestamp, open, high, low, close, volume, source)"
-            " VALUES (?,?,?,?,?,?,?,?,?)"
+            " (symbol, timeframe, timestamp, open, high, low, close, volume, source, price_basis)"
+            " VALUES (?,?,?,?,?,?,?,?,?,'as_traded')"
         )
 
         t1 = time.time()
