@@ -23,6 +23,9 @@ build/
 # Trade-import config — holds a local filesystem path and account name.
 # Copy ninjatrader.config.example.json to create it; see SETUP.md.
 ninjatrader.config.json
+# Deployment registry — local operator metadata including account names.
+# Copy deployment-registry.example.json; this never authorizes or blocks orders.
+deployment-registry.json
 draw.md
 
 # Backtest output bundles (one folder per run; regenerable, can be large)

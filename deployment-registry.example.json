@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "deployments": [
+    {
+      "id": "example-strategy-route",
+      "strategy": "ExampleStrategy",
+      "account": "EXAMPLE-ACCOUNT",
+      "connection": "example-connection",
+      "instruments": ["MNQ 09-26"],
+      "enabled": true,
+      "tags": ["evaluation"],
+      "notes": "Operator metadata only. This relationship is observed and reported, never enforced."
+    }
+  ]
+}

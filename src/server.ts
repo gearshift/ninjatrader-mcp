@@ -39,6 +39,7 @@ import {
   registerSubscribeLivePositions,
   registerUnsubscribeLivePositions,
 } from "./tools/positions.js";
+import { registerGetDeploymentRegistry } from "./tools/deployment-registry.js";
 import { startLiveFeedRuntime } from "./live/runtime.js";
 import { registerListTrades } from "./tools/list-trades.js";
 import { registerListDecisions } from "./tools/list-decisions.js";
@@ -97,6 +98,7 @@ export function registerGenericTools(
   unless(["unsubscribe_live_bars"], () => registerUnsubscribeLiveBars(server));
   unless(["live_feed_status"], () => registerLiveFeedStatus(server));
   unless(["get_positions"], () => registerGetPositions(server));
+  unless(["get_deployment_registry"], () => registerGetDeploymentRegistry(server));
   unless(["subscribe_live_positions"], () => registerSubscribeLivePositions(server));
   unless(["unsubscribe_live_positions"], () => registerUnsubscribeLivePositions(server));
   unless(["list_trades"], () => registerListTrades(server));

@@ -42,7 +42,7 @@ Everything above is **read-only or draw-only** — the bridge never touches your
   ┌──────────────────────────────────────────────────────────────────┐
   │  ninjatrader-mcp (Node.js process)                               │
   │                                                                  │
-  │   MCP tools (src/tools/) — 19 generic tools, plus:               │
+  │   MCP tools (src/tools/) — 23 default tools, plus:                │
   │     6 write tools (place/oco/change when trading is enabled;     │
   │     cancel/cancel_all/flatten when accounts are allow-listed)    │
   │     5 experiment-lab tools (registered by private bins           │
@@ -101,7 +101,7 @@ Everything above is **read-only or draw-only** — the bridge never touches your
 
 ## MCP tools
 
-The public server (`build/index.js`) registers 23 tools. The write tools appear conditionally: `place_order` / `place_oco` / `change_order` only when trading is enabled at startup, `cancel_order` / `cancel_all` / `flatten` whenever any account is allow-listed (so a kill-switch restart keeps orders manageable). The five lab tools appear only in a private bin that binds a `Lab` to its own engine (see [BUILD-YOUR-OWN.md](BUILD-YOUR-OWN.md)).
+The public server (`build/index.js`) registers 23 default read/draw tools and up to six conditional write tools (29 maximum). The write tools appear conditionally: `place_order` / `place_oco` / `change_order` only when trading is enabled at startup, `cancel_order` / `cancel_all` / `flatten` whenever any account is allow-listed (so a kill-switch restart keeps orders manageable). The five lab tools appear only in a private bin that binds a `Lab` to its own engine (see [BUILD-YOUR-OWN.md](BUILD-YOUR-OWN.md)).
 
 ### Market data
 
@@ -118,6 +118,7 @@ The public server (`build/index.js`) registers 23 tools. The write tools appear 
 | `subscribe_live_bars` / `unsubscribe_live_bars` | Stream live **closed** bars for a symbol into the candle cache (raw TFs: `5m` default, `15m`, and `15s`/`5s`/`1s` on demand). Answers with the truth from NT8 — `acked` plus the resolved contract — not just "message sent". Persists across restarts, replays on reconnect, gap-heals automatically. |
 | `live_feed_status` | Per-subscription health: acked state, contract, lag, dup/out-of-order/gap counters, heals in flight, `/feed` consumer count, position-feed health. |
 | `get_positions` | Read-only open positions per account (sim vs. live never merged): average entry, working stops/targets matched into dollar risk and R, unrealized P&L with its price source and age. Disconnected ⇒ `stale: true`, treated as *unknown*, never as flat. |
+| `get_deployment_registry` | Read the local operator registry of currently assigned strategies/accounts/instruments and annotate entries with observed account positions and working orders. Relationships are metadata only: duplicate instruments across routes are allowed, mismatches are advisories, and the registry is never consulted by order gates. |
 | `subscribe_live_positions` / `unsubscribe_live_positions` | Sparse event feed (fills, order changes, position transitions) with full-snapshot self-heal; adds per-trade age, fill history, and MAE/MFE to `get_positions`. |
 
 **For bots and dashboards** there is a push channel on the same port: `ws://127.0.0.1:9472/feed`, same bearer token. Subscribing on `/feed` creates the upstream NT8 stream too, so a bot is self-sufficient. A minimal Python consumer ships at `examples/python/live_feed_client.py`. Bars tagged `backfill: true` closed well before delivery — act-on-close logic must skip them.
@@ -230,6 +231,7 @@ The repo's `.mcp.json` already wires the server into Claude Code:
 | `NT_BRIDGE_PORT` | `9472` | Loopback TCP port for the bridge; an invalid value disables the bridge but not the server. |
 | `NT_DATA_PATH` | `<repo>/data` | Directory for `candles.db`, `lab.db`, and lab calibration. |
 | `NT_TRADES_CONFIG` | `<repo>/ninjatrader.config.json` | Path to the trade-import config. |
+| `NT_DEPLOYMENT_REGISTRY` | `<repo>/deployment-registry.json` when that file exists | Optional path to the operator deployment registry. Registry entries are observational metadata and never authorize or block orders. |
 | `NT_TRADING_*` | unset ⇒ **disabled** | Order write path enablement — see [TRADING.md](TRADING.md). |
 
 ### Config files
@@ -237,6 +239,7 @@ The repo's `.mcp.json` already wires the server into Claude Code:
 | File | Where | Tracked? | Purpose |
 |---|---|---|---|
 | `.env.local` | repo root | no | `NT_BRIDGE_TOKEN=<64-hex>` (created on first run) and, opt-in, the `NT_TRADING_*` variables. |
+| `deployment-registry.json` | repo root (or `NT_DEPLOYMENT_REGISTRY`) | no | Current strategy/account/instrument assignments used only to annotate telemetry. Copy the tracked `.example.json`; entries never affect order authorization. |
 | `ninjatrader.config.json` | repo root | no | `{ "dbPath": ..., "account"? }` for trade import; copy the tracked `.example.json`. |
 | `bridge.config.json` | NT8 user data dir | — | `{ "token", "url" }` — the AddOn's connection config; re-read every 5s while disconnected. |
 | `trading.config.json` | NT8 user data dir | — | The C#-side order gate; missing ⇒ write path disabled. See [TRADING.md](TRADING.md). |
