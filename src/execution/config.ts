@@ -10,6 +10,11 @@ const __dirname = path.dirname(__filename);
 // over the file, so a launch-env master switch overrides an on-disk one.
 const ENV_FILE = path.join(__dirname, "..", "..", ".env.local");
 
+// This fork is intentionally telemetry-only on a host with active live
+// strategies. Write tools are compiled out of the MCP surface regardless of
+// environment or local config. The C# AddOn has an independent matching guard.
+export const READ_ONLY_BUILD = true as const;
+
 const ENABLED_KEY = "NT_TRADING_ENABLED";
 const ACCOUNTS_KEY = "NT_TRADING_ALLOW_ACCOUNTS";
 const MAX_QTY_KEY = "NT_TRADING_MAX_QTY";
@@ -92,6 +97,7 @@ export function loadTradingConfig(env: NodeJS.ProcessEnv = process.env): Trading
  * a restart (deliberate); disabling can be done live via the runtime check.
  */
 export function isTradingRegistrationEnabled(): boolean {
+  if (READ_ONLY_BUILD) return false;
   const cfg = loadTradingConfig();
   return cfg.enabled && cfg.allowAccounts.length > 0;
 }
@@ -102,5 +108,6 @@ export function isTradingRegistrationEnabled(): boolean {
  * still leaves working orders manageable.
  */
 export function isRiskReducingRegistrationEnabled(): boolean {
+  if (READ_ONLY_BUILD) return false;
   return loadTradingConfig().allowAccounts.length > 0;
 }

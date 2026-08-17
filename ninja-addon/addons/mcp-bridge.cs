@@ -91,6 +91,9 @@ namespace NinjaTrader.NinjaScript.AddOns
 		private const int    ReconnectMinMs      = 1_000;
 		private const int    ReconnectMaxMs      = 30_000;
 		private const string ConfigFileName      = "bridge.config.json";
+		// Compile-time safety boundary for this fork. No config or server message
+		// can enable an order mutation while this constant is true.
+		private const bool   ReadOnlyBuild       = true;
 
 		public  static McpBridge Instance { get; private set; }
 
@@ -537,12 +540,8 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		// send
 
-		// Write ops advertised in hello `caps` so the server fails fast on deploy
-		// skew (new server, old AddOn) instead of timing out.
-		private static readonly string[] WriteCaps = new[]
-		{
-			"place_order", "place_oco", "cancel_order", "cancel_all", "flatten", "change_order",
-		};
+		// This fork is telemetry-only: advertise zero write capabilities.
+		private static readonly string[] WriteCaps = new string[0];
 
 		private async Task SendHelloAsync(ClientWebSocket ws, CancellationToken ct)
 		{
@@ -946,56 +945,37 @@ namespace NinjaTrader.NinjaScript.AddOns
 					break;
 				}
 
-				// Off the read thread: ResolveInstrument can block and Submit
-				// must never stall heartbeats.
+				// This fork is telemetry-only. Group every order mutation behind one
+				// compile-time rejection path; trading.config.json is intentionally
+				// irrelevant while ReadOnlyBuild is true.
 				case "place_order":
-				{
-					var o = obj;
-					Task.Run(() => HandlePlaceOrder(o));
-					break;
-				}
-
-				// Off the read thread: NT8 account calls can block and must
-				// never stall heartbeats.
 				case "place_oco":
-				{
-					var o = obj;
-					Task.Run(() => HandlePlaceOco(o));
-					break;
-				}
-
 				case "cancel_order":
-				{
-					var o = obj;
-					Task.Run(() => HandleCancelOrder(o));
-					break;
-				}
-
 				case "cancel_all":
-				{
-					var o = obj;
-					Task.Run(() => HandleCancelAll(o));
-					break;
-				}
-
 				case "flatten":
-				{
-					var o = obj;
-					Task.Run(() => HandleFlatten(o));
-					break;
-				}
-
 				case "change_order":
-				{
-					var o = obj;
-					Task.Run(() => HandleChangeOrder(o));
+					RejectReadOnlyWrite(obj, type);
 					break;
-				}
 
 				default:
 					Log("unknown message type: " + type);
 					break;
 			}
+		}
+
+		private void RejectReadOnlyWrite(IDictionary<string, object> obj, string type)
+		{
+			var id = GetString(obj, "id");
+			if (string.IsNullOrEmpty(id))
+			{
+				Log("read-only build rejected " + type + " without request id");
+				return;
+			}
+			var message = ReadOnlyBuild
+				? "This McpBridge binary is a compiled read-only telemetry build; order mutation is unavailable."
+				: "Order mutation dispatch is disabled in this McpBridge binary.";
+			SendErrorResponse(id, message, "read-only-build");
+			Log("read-only build rejected " + type + " id=" + id);
 		}
 
 		// request_candles

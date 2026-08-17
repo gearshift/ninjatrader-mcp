@@ -22,7 +22,8 @@
     "dump-bars": "tsc && node build/scripts/dump-bars.js",
     "audit-bars": "tsc && node build/scripts/audit-bars.js",
     "import-databento": "tsc && node build/scripts/import-databento.js",
-    "verify-import": "tsc && node build/scripts/verify-import.js"
+    "verify-import": "tsc && node build/scripts/verify-import.js",
+    "verify:read-only-surface": "npm run build && node scripts/verify-read-only-surface.mjs"
   },
   "files": [
     "build",

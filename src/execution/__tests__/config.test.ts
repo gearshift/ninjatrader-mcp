@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
+  READ_ONLY_BUILD,
   isTradingRegistrationEnabled,
   isRiskReducingRegistrationEnabled,
 } from "../config.js";
@@ -23,16 +24,17 @@ describe("write-tool registration matrix", () => {
     process.env.NT_TRADING_ALLOW_ACCOUNTS = accounts;
   }
 
-  it("enabled + allow-listed → both classes register", () => {
+  it("compiled read-only build registers no write tools even when env enables and allow-lists them", () => {
     set("1", "Sim101");
-    expect(isTradingRegistrationEnabled()).toBe(true);
-    expect(isRiskReducingRegistrationEnabled()).toBe(true);
+    expect(READ_ONLY_BUILD).toBe(true);
+    expect(isTradingRegistrationEnabled()).toBe(false);
+    expect(isRiskReducingRegistrationEnabled()).toBe(false);
   });
 
-  it("disabled + allow-listed → only risk-reducing (kill-switch)", () => {
+  it("disabled + allow-listed still registers no risk-reducing tools in the read-only build", () => {
     set("0", "Sim101");
     expect(isTradingRegistrationEnabled()).toBe(false);
-    expect(isRiskReducingRegistrationEnabled()).toBe(true);
+    expect(isRiskReducingRegistrationEnabled()).toBe(false);
   });
 
   it("enabled + EMPTY allow-list → NONE (risk-adding needs an account too)", () => {

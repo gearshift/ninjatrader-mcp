@@ -3,13 +3,16 @@ import path from "path";
 import { mkdirSync } from "fs";
 import { fileURLToPath } from "url";
 import { initializeSchema } from "./schema.js";
+import { resolveDataPath } from "./data-path.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dataPath = process.env.NT_DATA_PATH
-  ? path.resolve(process.env.NT_DATA_PATH)
-  : path.join(__dirname, "..", "..", "data");
+const repoRoot = path.join(__dirname, "..", "..");
+// Vitest runs files in parallel workers. resolveDataPath nests each worker/run
+// beneath the configured test base, avoiding concurrent WAL initialization;
+// outside Vitest an explicit NT_DATA_PATH remains exact and authoritative.
+const dataPath = resolveDataPath(process.env, repoRoot);
 
 mkdirSync(dataPath, { recursive: true });
 

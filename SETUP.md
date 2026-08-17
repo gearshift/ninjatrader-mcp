@@ -8,6 +8,10 @@ Goal: a working MCP server with a live NinjaTrader 8 bridge, real candles in the
 cache, and a drawing on a chart. Follow the steps in order — each one is
 verifiable before moving on.
 
+> **Fork safety note:** the `gearshift` fork is compiled read-only in both the
+> TypeScript server and C# AddOn. For account/position telemetry, copy only
+> `mcp-bridge.cs`; `mcp-renderer.cs` is optional and needed only for chart drawing.
+
 **Two steps belong to the human, not the agent.** Copying the C# files into the
 NinjaTrader installation and compiling them in the NinjaScript Editor are the
 developer's own hands. An agent must not write into `Documents/NinjaTrader 8/bin/Custom/`

@@ -1,4 +1,6 @@
-# Order placement & management (the write path)
+# Order placement & management (upstream reference only)
+
+> **Compiled out in the `gearshift` fork.** The TypeScript server never registers these tools, and the C# AddOn advertises zero write capabilities and rejects direct mutation messages. This document is retained to explain inherited upstream code; none of the configuration below can enable trading in this fork.
 
 This repo can **submit and manage orders** in NinjaTrader, not just observe. It
 is **default-off** and gated at three independent layers, and it fails closed
